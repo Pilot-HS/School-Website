@@ -164,7 +164,7 @@
       <span class="kicker">Get Started</span>
       <h2>Send us an admissions inquiry</h2>
     </div>
-    <form class="mt-32" style="max-width:760px;margin:0 auto;" data-demo-form>
+    <form id="admission-form" class="mt-32" style="max-width:760px;margin:0 auto;">
       <div class="form-grid">
         <div class="form-field"><label for="stu-name">Student's full name</label><input id="stu-name" type="text" required></div>
         <div class="form-field"><label for="stu-dob">Date of birth</label><input id="stu-dob" type="date" required></div>
@@ -175,14 +175,55 @@
         </div>
         <div class="form-field"><label for="parent-name">Parent/guardian name</label><input id="parent-name" type="text" required></div>
         <div class="form-field"><label for="parent-phone">Phone number</label><input id="parent-phone" type="tel" required></div>
-        <div class="form-field"><label for="parent-email">Email address</label><input id="parent-email" type="email" required></div>
+        <div class="form-field"><label for="parent-email">Email address</label><input id="parent-email" type="email"></div>
       </div>
       <div class="form-field"><label for="notes">Anything we should know?</label><textarea id="notes"></textarea></div>
-      <button type="submit" class="btn btn-primary">Submit Inquiry</button>
+      <input type="text" id="hp-field" name="website" style="position:absolute;left:-9999px;" tabindex="-1" autocomplete="off">
+      <button type="submit" class="btn btn-primary" id="admission-submit-btn">Submit Inquiry</button>
       <p class="form-submit-note"></p>
     </form>
   </div>
 </section>
+
+<script>
+document.getElementById("admission-form").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  var note = document.querySelector("#admission-form .form-submit-note");
+  var btn = document.getElementById("admission-submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Submitting…";
+
+  try {
+    var res = await fetch("https://school-portal-topaz.vercel.app/api/admissions/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        student_name: document.getElementById("stu-name").value,
+        parent_name: document.getElementById("parent-name").value,
+        phone: document.getElementById("parent-phone").value,
+        email: document.getElementById("parent-email").value,
+        grade_applying: document.getElementById("grade").value,
+        notes: document.getElementById("notes").value,
+        honeypot: document.getElementById("hp-field").value,
+      }),
+    });
+    var result = await res.json();
+    if (res.ok) {
+      note.textContent = "Thank you — your inquiry has been received. The admissions office will contact you soon.";
+      note.style.color = "#2f6b4f";
+      document.getElementById("admission-form").reset();
+    } else {
+      note.textContent = result.error || "Something went wrong. Please try again or call the office directly.";
+      note.style.color = "#a13636";
+    }
+  } catch (err) {
+    note.textContent = "Couldn't reach the server. Please check your connection and try again.";
+    note.style.color = "#a13636";
+  }
+  btn.disabled = false;
+  btn.textContent = "Submit Inquiry";
+});
+</script>
 
 <div class="cta-band">
   <div class="container cta-band-inner" style="padding-top:36px;padding-bottom:36px;">
