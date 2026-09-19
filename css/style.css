@@ -635,3 +635,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Print styles for the admission confirmation slip */
+@media print {
+  .topbar, header.site-header, .cta-band, .newsletter, footer.site-footer, .no-print {
+    display: none !important;
+  }
+  body { background: #fff !important; }
+}

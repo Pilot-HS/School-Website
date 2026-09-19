@@ -222,6 +222,11 @@
             <option>Grade 1</option><option>Grade 2</option><option>Grade 3</option><option>Grade 4</option><option>Grade 5</option><option>Grade 6</option><option>Grade 7</option><option>Grade 8</option><option>Grade 9</option><option>Grade 10</option><option>Grade 11</option><option>Grade 12</option>
           </select>
         </div>
+        <div class="form-field"><label for="academic_year_id">Academic year *</label>
+          <select id="academic_year_id" name="academic_year_id" required>
+            <option value="">Loading&hellip;</option>
+          </select>
+        </div>
       </div>
       <div class="form-field"><label for="last_school_certificate">Last school's certificate / progress report (image)</label><input id="last_school_certificate" name="last_school_certificate" type="file" accept="image/jpeg,image/png"></div>
 
@@ -235,10 +240,47 @@
       <p class="form-submit-note"></p>
       <p class="form-note">Images must be JPEG or PNG, under 5MB each.</p>
     </form>
+
+    <div id="admission-confirmation" style="display:none;max-width:600px;margin:0 auto;border:1px solid var(--border);padding:32px;">
+      <button class="btn btn-primary no-print" style="margin-bottom:20px;" onclick="window.print()">Print / Save as PDF</button>
+      <div style="border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:16px;">
+        <h2 style="margin:0;">Government Boys High School, P.H. Pilot, Dadu</h2>
+        <p style="margin:4px 0 0;color:var(--muted);">Application Confirmation</p>
+      </div>
+      <table class="fee-table">
+        <tbody>
+          <tr><th>Reference ID</th><td id="conf-ref-id" style="font-weight:700;"></td></tr>
+          <tr><th>Student Name</th><td id="conf-student-name"></td></tr>
+          <tr><th>Class Applying For</th><td id="conf-class"></td></tr>
+          <tr><th>Academic Year</th><td id="conf-academic-year"></td></tr>
+          <tr><th>Date Submitted</th><td id="conf-date"></td></tr>
+        </tbody>
+      </table>
+      <p class="form-note mt-32">Keep this reference ID for any future inquiries about this application. The admissions office will contact you soon.</p>
+      <a href="admissions.html" class="btn btn-outline no-print mt-32">Submit Another Application</a>
+    </div>
   </div>
 </section>
 
 <script>
+(async function loadAcademicYears() {
+  var select = document.getElementById("academic_year_id");
+  try {
+    var res = await fetch("https://school-portal-topaz.vercel.app/api/academic-years/list");
+    var result = await res.json();
+    var years = result.academic_years || [];
+    if (years.length === 0) {
+      select.innerHTML = '<option value="">Not available &mdash; please call the office</option>';
+      return;
+    }
+    select.innerHTML = '<option value="">Select&hellip;</option>' + years.map(function (y) {
+      return '<option value="' + y.id + '"' + (y.is_current ? ' selected' : '') + '>' + y.label + (y.is_current ? ' (Current)' : '') + '</option>';
+    }).join('');
+  } catch (err) {
+    select.innerHTML = '<option value="">Could not load &mdash; please refresh</option>';
+  }
+})();
+
 document.getElementById("admission-form").addEventListener("submit", async function (e) {
   e.preventDefault();
   var note = document.querySelector("#admission-form .form-submit-note");
@@ -251,6 +293,10 @@ document.getElementById("admission-form").addEventListener("submit", async funct
   formData.set("sibling_enrolled", document.getElementById("sibling_enrolled").checked ? "yes" : "no");
   formData.set("declaration_accepted", document.getElementById("declaration_accepted").checked ? "yes" : "no");
 
+  var studentName = document.getElementById("student_full_name").value;
+  var classApplying = document.getElementById("class_applying_for").value;
+  var academicYearText = document.getElementById("academic_year_id").selectedOptions[0].textContent;
+
   try {
     var res = await fetch("https://school-portal-topaz.vercel.app/api/admissions/submit-application", {
       method: "POST",
@@ -258,9 +304,13 @@ document.getElementById("admission-form").addEventListener("submit", async funct
     });
     var result = await res.json();
     if (res.ok) {
-      note.textContent = "Thank you — your application has been received. The admissions office will contact you soon.";
-      note.style.color = "#2f6b4f";
-      form.reset();
+      document.getElementById("conf-ref-id").textContent = result.reference_id;
+      document.getElementById("conf-student-name").textContent = studentName;
+      document.getElementById("conf-class").textContent = classApplying;
+      document.getElementById("conf-academic-year").textContent = academicYearText;
+      document.getElementById("conf-date").textContent = new Date().toLocaleDateString();
+      form.style.display = "none";
+      document.getElementById("admission-confirmation").style.display = "block";
     } else {
       note.textContent = result.error || "Something went wrong. Please try again or visit the office directly.";
       note.style.color = "#a13636";
